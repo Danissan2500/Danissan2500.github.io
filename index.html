@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PONGPA'2</title> PONPGA'2 Definitive Edition
+<style>
+    body {
+        background-color: black;
+        color: green;
+    }
+    canvas {
+        border: 4px solid green;
+        display: block;
+        margin: 0 auto;
+    }
+</style>
+</head>
+<body>
+<canvas id="pongCanvas" width="800" height="400"></canvas>
+<button id="startButton">Iniciar Juego</button>
+<button id="pauseButton">Pausa</button>
+<button id="resetButton">Reiniciar</button>
+<div id="countdown"></div>
+
+<script>
+    const canvas = document.getElementById('pongCanvas');
+    const context = canvas.getContext('2d');
+
+    const paddleWidth = 10;
+    const paddleHeight = 100;
+    const paddleSpeed = 7;
+
+    const ballSize = 10;
+    const ballSpeed = 8;
+
+    let player1Y = canvas.height / 2 - paddleHeight / 2;
+    let player2Y = canvas.height / 2 - paddleHeight / 2;
+
+    let wPressed = false;
+    let sPressed = false;
+    let upPressed = false;
+    let downPressed = false;
+
+    let ballX = canvas.width / 2;
+    let ballY = canvas.height / 2;
+    let ballSpeedX = Math.random() < 0.5 ? -ballSpeed : ballSpeed;
+    let ballSpeedY = Math.random() < 0.5 ? -ballSpeed : ballSpeed;
+
+    let player1Score = 0;
+    let player2Score = 0;
+
+    let ballColor = 'white';
+
+    let animationFrameId;
+    let isPaused = false;
+
+    function draw() {
+        context.clearRect(0, 0, canvas.width, canvas.height);
+
+        context.fillStyle = 'green';
+        context.fillRect(0, player1Y, paddleWidth, paddleHeight);
+        context.fillRect(canvas.width - paddleWidth, player2Y, paddleWidth, paddleHeight);
+
+        context.beginPath();
+        context.fillStyle = ballColor;
+        context.arc(ballX, ballY, ballSize, 0, Math.PI * 2);
+        context.fill();
+
+        context.font = '24px Arial';
+        context.fillStyle = 'red';
+        context.fillText(`Jugador 1: ${player1Score}`, 20, 30);
+        context.fillStyle = 'yellow';
+        context.fillText(`Jugador 2: ${player2Score}`, canvas.width - 180, 30);
+
+        if (!isPaused) {
+            ballX += ballSpeedX;
+            ballY += ballSpeedY;
+
+            if (ballY - ballSize <= 0 || ballY + ballSize >= canvas.height) {
+                ballSpeedY = -ballSpeedY;
+            }
+
+            // Colisión con las paletas
+            if (ballX - ballSize <= paddleWidth && ballY >= player1Y && ballY <= player1Y + paddleHeight) {
+                ballSpeedX = -ballSpeedX;
+                let paddleCenter = player1Y + paddleHeight / 2;
+                let impactPoint = ballY - paddleCenter; // Distancia del impacto respecto al centro de la paleta
+                ballSpeedY = impactPoint * 0.3; // Aumentar el impacto en el eje Y según la posición
+                ballColor = 'red';
+            } else if (ballX + ballSize >= canvas.width - paddleWidth && ballY >= player2Y && ballY <= player2Y + paddleHeight) {
+                ballSpeedX = -ballSpeedX;
+                let paddleCenter = player2Y + paddleHeight / 2;
+                let impactPoint = ballY - paddleCenter; // Distancia del impacto respecto al centro de la paleta
+                ballSpeedY = impactPoint * 0.3; // Aumentar el impacto en el eje Y según la posición
+                ballColor = 'yellow';
+            }
+
+            // Incremento de la puntuación
+            if (ballX - ballSize <= 0) { // Gol de jugador 2
+                player2Score++;
+                reset();
+            } else if (ballX + ballSize >= canvas.width) { // Gol de jugador 1
+                player1Score++;
+                reset();
+            }
+
+            // Movimiento de las paletas
+            if (wPressed && player1Y > 0) {
+                player1Y -= paddleSpeed;
+            } else if (sPressed && player1Y < canvas.height - paddleHeight) {
+                player1Y += paddleSpeed;
+            }
+
+            if (upPressed && player2Y > 0) {
+                player2Y -= paddleSpeed;
+            } else if (downPressed && player2Y < canvas.height - paddleHeight) {
+                player2Y += paddleSpeed;
+            }
+
+            // Verificación del ganador
+            if (player1Score === 20 || player2Score === 20) {
+                cancelAnimationFrame(animationFrameId);
+                const winner = player1Score === 20 ? "Jugador 1" : "Jugador 2";
+                alert(`¡${winner} ha ganado el juego!`);
+            } else {
+                animationFrameId = requestAnimationFrame(draw);
+            }
+        } else {
+            cancelAnimationFrame(animationFrameId);
+        }
+    }
+
+    function reset() {
+        ballX = canvas.width / 2;
+        ballY = canvas.height / 2;
+        ballSpeedX = Math.random() < 0.5 ? -ballSpeed : ballSpeed;
+        ballSpeedY = Math.random() < 0.5 ? -ballSpeed : ballSpeed;
+        ballColor = 'white';
+    }
+
+    function startGame() {
+        let countdown = 3;
+        const countdownElement = document.getElementById('countdown');
+        countdownElement.innerText = countdown;
+
+        const countdownInterval = setInterval(() => {
+            countdown--;
+            countdownElement.innerText = countdown;
+            if (countdown === 0) {
+                clearInterval(countdownInterval);
+                countdownElement.innerText = '';
+                animationFrameId = requestAnimationFrame(draw);
+                document.getElementById('startButton').style.display = 'none';
+            }
+        }, 1000);
+    }
+
+    document.getElementById('startButton').addEventListener('click', startGame);
+    document.getElementById('pauseButton').addEventListener('click', togglePause);
+    document.getElementById('resetButton').addEventListener('click', function() {
+        location.reload();
+    });
+
+    document.addEventListener('keydown', function(event) {
+        if (event.key === ' ') {
+            togglePause();
+        }
+        if (event.key === 'w') {
+            wPressed = true;
+        } else if (event.key === 's') {
+            sPressed = true;
+        } else if (event.key === 'ArrowUp') {
+            upPressed = true;
+        } else if (event.key === 'ArrowDown') {
+            downPressed = true;
+        }
+    });
+
+    document.addEventListener('keyup', function(event) {
+        if (event.key === 'w') {
+            wPressed = false;
+        } else if (event.key === 's') {
+            sPressed = false;
+        } else if (event.key === 'ArrowUp') {
+            upPressed = false;
+        } else if (event.key === 'ArrowDown') {
+            downPressed = false;
+        }
+    });
+    
+//funcion de pausa
+    function togglePause() {
+        isPaused = !isPaused;
+        const pauseButton = document.getElementById('pauseButton');
+        pauseButton.innerText = isPaused ? 'Resume' : 'Pause';
+        if (!isPaused) {
+            draw();
+        }
+    }
+</script>
+</body> Desarrollado por: LOS PILEROS
+</html>
